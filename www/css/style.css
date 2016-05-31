@@ -1,0 +1,11 @@
+.btn-back {
+    padding: .3em;
+}
+.btn-back img {
+    width: 25px;
+}
+.input-msg {
+    width: 99%;
+    margin-right: 1%;
+    padding: .25em;
+}
