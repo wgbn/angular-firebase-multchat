@@ -27,7 +27,7 @@
                         Seus Grupos
                     </div>
 
-                    <a class="item item-avatar" ng-repeat="myRoom in myRooms" href="/#/chat/{{myRoom.room}}">
+                    <a class="item item-avatar" ng-repeat="myRoom in myRooms" href="#/chat/{{myRoom.room}}">
                         <img src="{{myRoom.avatar}}">
                         <h2>{{myRoom.room}}</h2>
                         <span class="badge badge-assertive" ng-show="contaMsgs(myRoom)">{{contaMsgs(myRoom)}}</span>
@@ -37,7 +37,7 @@
                         Outros Grupos
                     </div>
 
-                    <a class="item item-avatar" ng-repeat="room in rooms" href="/#/chat/{{room.room}}">
+                    <a class="item item-avatar" ng-repeat="room in rooms" href="#/chat/{{room.room}}">
                         <img src="{{room.avatar}}">
                         <h2>{{room.room}}</h2>
                     </a>

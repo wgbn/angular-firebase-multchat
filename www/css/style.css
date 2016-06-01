@@ -5,7 +5,34 @@
     width: 25px;
 }
 .input-msg {
+    padding: 0 .5em !important;
+    margin: 0;
     width: 99%;
+    height: 50px !important;
     margin-right: 1%;
-    padding: .25em;
+}
+.btn-chat {
+    display: inline-block;
+    padding: .5em 1em;
+    text-decoration: none;
+    color: #fff;
+
+    display:flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    align-content: stretch;
+    align-items: center;
+}
+.chat-footer {
+    padding: 0;
+    height: 50px;
+    border-top: 1px solid #444 !important;
+}
+.chat-imagem {
+    text-align: center;
+}
+.chat-imagem img {
+    width: 75%;
+    border: 2px solid #444444;
 }

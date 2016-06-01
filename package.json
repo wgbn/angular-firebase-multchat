@@ -20,7 +20,19 @@
     "cordova-plugin-whitelist",
     "cordova-plugin-splashscreen",
     "cordova-plugin-statusbar",
-    "ionic-plugin-keyboard"
+    "ionic-plugin-keyboard",
+    {
+      "locator": "https://git-wip-us.apache.org/repos/asf/cordova-plugin-file-transfer.git",
+      "id": "cordova-plugin-file-transfer"
+    },
+    {
+      "locator": "https://git-wip-us.apache.org/repos/asf/cordova-plugin-camera.git",
+      "id": "cordova-plugin-camera"
+    },
+    {
+      "locator": "https://github.com/hazemhagrass/phonegap-base64.git",
+      "id": "com-badrit-base64"
+    }
   ],
   "cordovaPlatforms": [
     "android"

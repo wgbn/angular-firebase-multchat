@@ -80,8 +80,8 @@ angular.module('starter', ['ionic', 'firebase'])
         ]
     )
 
-    .factory('Api', ['$http', '$rootScope', '$state',
-        function ($http, $rootScope, $state) {
+    .factory('Api', ['$http', '$rootScope', '$state', '$ionicLoading',
+        function ($http, $rootScope, $state, $ionicLoading) {
             var _url = 'https://vivasalute.com.br/mobile/api';
             var _self = this;
             var Api = {
@@ -89,8 +89,11 @@ angular.module('starter', ['ionic', 'firebase'])
                     return $http.post(_url + '/loginMobile', {usuario: _usuario, senha: _senha});
                 },
                 getDadosUsuario: function () {
+                    $ionicLoading.show({template: 'Carregando...'});
                     $http.get(_url + '/getDadosUsuario/user/' + $rootScope.usuario.username + '/token/' + $rootScope.usuario.token)
                         .then(function (ok) {
+                            $ionicLoading.hide();
+
                             if (ok.status == 200 && ok.data.sucesso) {
                                 $rootScope.usuario.nome = ok.data.usuario.perfil.nome;
                                 $rootScope.usuario.avatar = ok.data.usuario.perfil.imagem;
@@ -108,6 +111,7 @@ angular.module('starter', ['ionic', 'firebase'])
                                 $rootScope.$broadcast('dadosOk');
                             }
                         }, function (erro) {
+                            $ionicLoading.hide();
                             console.log(erro);
                         });
                 },
@@ -151,7 +155,7 @@ angular.module('starter', ['ionic', 'firebase'])
             var countMyRooms = [];
 
             var Chat = {
-                start: function () {
+                startFire: function () {
                     console.log("Firebase Start");
 
                     ref = new Firebase('https://jsday-app.firebaseio.com/chats');
@@ -174,7 +178,7 @@ angular.module('starter', ['ionic', 'firebase'])
                     console.info('allMsg');
                     return messages;
                 },
-                addMsg: function (_room, _message) {
+                addMsg: function (_room, _message, _img) {
                     var _dt = new Date();
 
                     if (!allMyRooms.filter(function (_r) {
@@ -197,12 +201,16 @@ angular.module('starter', ['ionic', 'firebase'])
                         });
                     }
 
-                    return messages.$add({
+                    var _msg = {
                         registro: _dt.getTime(),
                         room: _room,
                         text: _message,
                         user: $rootScope.user
-                    });
+                    };
+
+                    if (_img) _msg.imagem = _img;
+
+                    return messages.$add(_msg);
                 },
                 getMsg: function (_room, _messageId) {
                     return $firebase(ref.child('messages').child(_messageId)).$asObject();
@@ -243,29 +251,32 @@ angular.module('starter', ['ionic', 'firebase'])
             };
 
             if (Api.verificaLogado())
-                Chat.start();
+                Chat.startFire();
 
             return Chat;
         }
     ])
 
     .controller('LoginCtrl',
-        ['$scope', '$rootScope', '$state', 'Api',
-            function ($scope, $rootScope, $state, Api) {
+        ['$scope', '$rootScope', '$state', '$ionicLoading', '$ionicPopup', 'Api',
+            function ($scope, $rootScope, $state, $ionicLoading, $ionicPopup, Api) {
                 console.info('LoginCtrl');
 
                 if ($rootScope.user)
                     $state.go('home');
 
                 $scope.login = {
-                    usuario: 'wgbn.theo@gmail.com',
-                    senha: '123'
+                    usuario: '',
+                    senha: ''
                 };
 
                 $scope.loginClick = function () {
                     if ($scope.login.usuario && $scope.login.senha) {
+                        $ionicLoading.show({template: 'Entrando...'});
                         Api.fazerLogin($scope.login.usuario, $scope.login.senha)
                             .then(function (ok) {
+                                $ionicLoading.hide();
+
                                 if (ok.status == 200 && ok.data.sucesso) {
                                     $rootScope.usuario = {
                                         username: ok.data.username,
@@ -273,16 +284,32 @@ angular.module('starter', ['ionic', 'firebase'])
                                         token: ok.data.token
                                     };
                                     Api.getDadosUsuario();
+                                } else {
+                                    $ionicPopup.alert({
+                                        title: 'Oops!',
+                                        template: ok.data.erro
+                                    });
                                 }
                             }, function (erro) {
+                                $ionicLoading.hide();
+                                $ionicPopup.alert({
+                                    title: 'Oops!',
+                                    template: 'Não foi possível conectar ao servidor.'
+                                });
                                 console.log(erro);
                             });
+                    } else {
+                        $ionicPopup.alert({
+                            title: 'Oops!',
+                            template: 'Preencha todos os campos.'
+                        });
                     }
                 };
 
                 $scope.$on('dadosOk', function () {
                     $state.go('home');
                 });
+
             }
         ]
     )
@@ -322,10 +349,8 @@ angular.module('starter', ['ionic', 'firebase'])
                 });
 
                 $scope.sendClick = function () {
-                    var agora = new Date();
-
                     if ($scope.texto) {
-                        Message.addMsg($scope.room, $scope.texto);
+                        Message.addMsg($scope.room, $scope.texto, false);
                         $scope.texto = "";
                     }
                 };
@@ -335,6 +360,54 @@ angular.module('starter', ['ionic', 'firebase'])
                         $ionicScrollDelegate.$getByHandle('mainScroll').scrollBottom();
                     }, 150);
                 }
+
+                /**
+                 * Camera upload
+                 */
+
+                $scope.data = {};
+                $scope.obj;
+                var pictureSource;   // picture source
+                var destinationType; // sets the format of returned value
+                var url;
+
+                // on DeviceReady check if already logged in (in our case CODE saved)
+                ionic.Platform.ready(function () {
+                    if (!navigator.camera) {
+                        // error handling
+                        return;
+                    }
+                    //pictureSource=navigator.camera.PictureSourceType.PHOTOLIBRARY;
+                    pictureSource = navigator.camera.PictureSourceType.CAMERA;
+                    destinationType = navigator.camera.DestinationType.FILE_URI;
+                });
+
+                // take picture
+                $scope.cameraClick = function () {
+                    var options = {
+                        quality: 25,
+                        destinationType: destinationType,
+                        sourceType: pictureSource,
+                        encodingType: 0
+                    };
+
+                    if (!navigator.camera) {
+                        // error handling
+                        return;
+                    }
+                    navigator.camera.getPicture(function (imageURI) {
+                        window.plugins.Base64.encodeFile(imageURI, function(base64){
+                            if (base64) {
+                                Message.addMsg($scope.room, $scope.texto, base64);
+                                $scope.texto = "";
+                            }
+                        });
+                    }, function (err) {
+                        console.log("got camera error ", err);
+                        // error handling camera plugin
+                    }, options);
+                };
+
             }
         ]
     )
