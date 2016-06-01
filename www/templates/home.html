@@ -24,7 +24,7 @@
                 <div class="list">
 
                     <div class="item item-divider">
-                        Grupos Ativos
+                        Seus Grupos
                     </div>
 
                     <a class="item item-avatar" ng-repeat="myRoom in myRooms" href="/#/chat/{{myRoom.room}}">
@@ -51,6 +51,10 @@
             <ion-content>
 
                 Lorem ipsum dolor sit amet, consectetur adipisicing elit. Consequuntur cum ea eius illo ipsam itaque maxime nostrum recusandae rerum. At aut delectus dolore esse laboriosam mollitia quos sapiente soluta tenetur!
+
+                <p>
+                    <button class="button button-block button-dark" ng-click="logout()">logout</button>
+                </p>
 
             </ion-content>
         </ion-tab>

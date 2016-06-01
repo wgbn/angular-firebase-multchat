@@ -25,11 +25,11 @@ angular.module('starter', ['ionic', 'firebase'])
                 });
 
                 /*$rootScope.user = {
-                    userId: 4,
-                    nome: "Walter",
-                    avatar: "http://www.avatarpro.biz/avatar?s=50"
-                };*/
-                $rootScope.user = {};
+                 userId: 0,
+                 nome: "Walter",
+                 avatar: "http://www.avatarpro.biz/avatar?s=50"
+                 };*/
+                //$rootScope.user = {};
             }
         ]
     )
@@ -57,9 +57,9 @@ angular.module('starter', ['ionic', 'firebase'])
 
                 $httpProvider.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
 
-                var serialize = function(obj, prefix) {
+                var serialize = function (obj, prefix) {
                     var str = [];
-                    for(var p in obj) {
+                    for (var p in obj) {
                         if (obj.hasOwnProperty(p)) {
                             var k = prefix ? prefix + "[" + p + "]" : p, v = obj[p];
                             str.push(typeof v == "object" ?
@@ -70,7 +70,7 @@ angular.module('starter', ['ionic', 'firebase'])
                     return str.join("&");
                 };
 
-                $httpProvider.defaults.transformRequest = function(data){
+                $httpProvider.defaults.transformRequest = function (data) {
                     if (data === undefined) {
                         return data;
                     }
@@ -80,44 +80,96 @@ angular.module('starter', ['ionic', 'firebase'])
         ]
     )
 
-    .factory('Api', ['$http', '$rootScope',
-        function ($http, $rootScope) {
-            var _url = 'http://teste.vivasalute.com.br/mobile/api';
-            return {
-                fazerLogin: function(_usuario, _senha){
-                    return $http.post(_url+'/loginMobile', {usuario: _usuario, senha: _senha});
-                        /*.then(function(data){
-                            console.log(data);
-                        }, function(erro){
-                            console.log('erro');
-                        });*/
+    .factory('Api', ['$http', '$rootScope', '$state',
+        function ($http, $rootScope, $state) {
+            var _url = 'https://vivasalute.com.br/mobile/api';
+            var _self = this;
+            var Api = {
+                fazerLogin: function (_usuario, _senha) {
+                    return $http.post(_url + '/loginMobile', {usuario: _usuario, senha: _senha});
                 },
+                getDadosUsuario: function () {
+                    $http.get(_url + '/getDadosUsuario/user/' + $rootScope.usuario.username + '/token/' + $rootScope.usuario.token)
+                        .then(function (ok) {
+                            if (ok.status == 200 && ok.data.sucesso) {
+                                $rootScope.usuario.nome = ok.data.usuario.perfil.nome;
+                                $rootScope.usuario.avatar = ok.data.usuario.perfil.imagem;
+                                $rootScope.usuario.avatar64 = ok.data.usuario.perfil.imagembase64;
+
+                                $rootScope.user = {
+                                    userId: $rootScope.usuario.userId,
+                                    nome: $rootScope.usuario.nome.split(' ')[0],
+                                    avatar: ok.data.usuario.perfil.imagem
+                                };
+
+                                Api.setLocalStorage('user', $rootScope.user);
+                                Api.setLocalStorage('usuario', $rootScope.usuario);
+
+                                $rootScope.$broadcast('dadosOk');
+                            }
+                        }, function (erro) {
+                            console.log(erro);
+                        });
+                },
+                setLocalStorage: function (_item, _valor) {
+                    localStorage.setItem(_item, JSON.stringify(_valor));
+                },
+                getLocalStorage: function (_item) {
+                    return JSON.parse(localStorage.getItem(_item));
+                },
+                verificaLogado: function () {
+                    if (!$rootScope.user) {
+                        if (Api.getLocalStorage('user')) {
+                            $rootScope.user = Api.getLocalStorage('user');
+
+                            if (!$rootScope.usuario) {
+                                if (Api.getLocalStorage('usuario')) {
+                                    $rootScope.usuario = Api.getLocalStorage('usuario');
+                                } else {
+                                    $state.go('login');
+                                    return false;
+                                }
+                            }
+                        } else {
+                            $state.go('login');
+                            return false;
+                        }
+                    }
+                    return true;
+                }
             };
+            return Api;
         }
     ])
 
-    .factory('Message', ['$firebaseArray', '$rootScope',
-        function ($firebaseArray, $rootScope) {
-            var ref = new Firebase('https://jsday-app.firebaseio.com/chats');
-            var allRooms = $firebaseArray(ref.child('rooms'));
-            var allMyRooms = $firebaseArray(ref.child('userRooms').child($rootScope.user.userId));
-
+    .factory('Message', ['$firebaseArray', '$rootScope', 'Api',
+        function ($firebaseArray, $rootScope, Api) {
+            var ref;
+            var allRooms;
+            var allMyRooms;
+            var messages;
             var countMyRooms = [];
-            allMyRooms.$loaded().then(function (arr) {
-                arr.forEach(function (_val) {
-                    var _msgs = $firebaseArray(ref.child('messages').orderByChild('room').equalTo(_val.room).limitToLast(100));
-                    _msgs.$loaded().then(function (res) {
-                        var _cont = res.filter(function (_m) {
-                            return _m.registro > _val.last;
-                        });
-                        countMyRooms.push({room: _val.room, msgs: _cont.length});
-                    });
-                });
-                console.info('countMyRooms', countMyRooms);
-            });
-
 
             var Chat = {
+                start: function () {
+                    console.log("Firebase Start");
+
+                    ref = new Firebase('https://jsday-app.firebaseio.com/chats');
+                    allRooms = $firebaseArray(ref.child('rooms'));
+                    allMyRooms = $firebaseArray(ref.child('userRooms').child($rootScope.user.userId ? $rootScope.user.userId : 0));
+
+                    allMyRooms.$loaded().then(function (arr) {
+                        arr.forEach(function (_val) {
+                            var _msgs = $firebaseArray(ref.child('messages').orderByChild('room').equalTo(_val.room).limitToLast(100));
+                            _msgs.$loaded().then(function (res) {
+                                var _cont = res.filter(function (_m) {
+                                    return _m.registro > _val.last;
+                                });
+                                countMyRooms.push({room: _val.room, msgs: _cont.length});
+                            });
+                        });
+                    });
+                },
                 allMsg: function () {
                     console.info('allMsg');
                     return messages;
@@ -160,6 +212,9 @@ angular.module('starter', ['ionic', 'firebase'])
                 },
                 setRoom: function (_room) {
                     messages = $firebaseArray(ref.child('messages').orderByChild('room').equalTo(_room).limitToLast(100));
+                    messages.$watch(function (event) {
+                        $rootScope.$broadcast('chatReload', {reload: true});
+                    });
                     return messages;
                 },
                 setRoomLastView: function (_room) {
@@ -187,6 +242,9 @@ angular.module('starter', ['ionic', 'firebase'])
                 },
             };
 
+            if (Api.verificaLogado())
+                Chat.start();
+
             return Chat;
         }
     ])
@@ -196,40 +254,54 @@ angular.module('starter', ['ionic', 'firebase'])
             function ($scope, $rootScope, $state, Api) {
                 console.info('LoginCtrl');
 
-                if ($rootScope.user.userId)
+                if ($rootScope.user)
                     $state.go('home');
 
                 $scope.login = {
-                    usuario: '',
-                    senha: ''
+                    usuario: 'wgbn.theo@gmail.com',
+                    senha: '123'
                 };
 
                 $scope.loginClick = function () {
-                    if ($scope.login.usuario && $scope.login.senha){
+                    if ($scope.login.usuario && $scope.login.senha) {
                         Api.fazerLogin($scope.login.usuario, $scope.login.senha)
                             .then(function (ok) {
-                                if (ok.status == 200 && ok.data.sucesso){
-                                    console.log(ok);
+                                if (ok.status == 200 && ok.data.sucesso) {
+                                    $rootScope.usuario = {
+                                        username: ok.data.username,
+                                        userId: ok.data.usuario_id,
+                                        token: ok.data.token
+                                    };
+                                    Api.getDadosUsuario();
                                 }
                             }, function (erro) {
                                 console.log(erro);
                             });
                     }
                 };
+
+                $scope.$on('dadosOk', function () {
+                    $state.go('home');
+                });
             }
         ]
     )
 
     .controller('HomeCtrl',
-        ['$scope', '$rootScope', 'Message',
-            function ($scope, $rootScope, Message) {
-                console.info('HomeCtrl');
+        ['$scope', '$rootScope', '$state', 'Message',
+            function ($scope, $rootScope, $state, Message) {
                 $scope.rooms = Message.allRooms();
                 $scope.myRooms = Message.allMyRooms();
 
                 $scope.contaMsgs = function (_room) {
                     return Message.getCountMsgs(_room.room, _room.last);
                 };
+
+                $scope.logout = function () {
+                    $rootScope.user = null;
+                    $rootScope.usuario = null;
+                    $state.go('login');
+                }
             }
         ]
     )
@@ -245,13 +317,16 @@ angular.module('starter', ['ionic', 'firebase'])
 
                 scro();
 
+                $scope.$on('chatReload', function (data) {
+                    scro();
+                });
+
                 $scope.sendClick = function () {
                     var agora = new Date();
 
                     if ($scope.texto) {
                         Message.addMsg($scope.room, $scope.texto);
                         $scope.texto = "";
-                        scro();
                     }
                 };
 
